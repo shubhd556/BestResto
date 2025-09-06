@@ -33,10 +33,6 @@ function Badge({
     </span>
   );
 }
-function getPhotoUrl(photo: any, apiKey: string, maxHeight = 300) {
-  if (!photo?.name) return null;
-  return `https://places.googleapis.com/v1/${photo.name}/media?key=${apiKey}&maxHeightPx=${maxHeight}`;
-}
 
 function SkeletonCard() {
   return (
@@ -55,6 +51,28 @@ function SkeletonCard() {
   );
 }
 
+/**
+ * Minimal Place/Photo types used in the UI.
+ * Expand fields if you need more data from the Places API.
+ */
+type Photo = { name?: string };
+
+type Place = {
+  id: string;
+  displayName?: { text?: string } | string;
+  shortFormattedAddress?: string;
+  rating?: number | null;
+  userRatingCount?: number | null;
+  priceLevel?: string | null;
+  currentOpeningHours?: { openNow?: boolean } | null;
+  delivery?: boolean | null;
+  dineIn?: boolean | null;
+  takeout?: boolean | null;
+  servesVegetarianFood?: boolean | null;
+  photos?: Photo[] | null;
+  googleMapsUri?: string | null;
+};
+
 export default function Home() {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [cuisine, setCuisine] = useState("");
@@ -64,8 +82,8 @@ export default function Home() {
   const [dietary, setDietary] = useState<"veg" | "nonveg" | "both">("both");
   const [services, setServices] = useState<ServicePrefs>({});
   const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<any[]>([]);
-  const [ai, setAi] = useState<any>(null);
+  const [results, setResults] = useState<Place[]>([]);
+  const [ai, setAi] = useState<{ rationale?: string } | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   // Anywhere search
@@ -100,8 +118,8 @@ export default function Home() {
       if (!res.ok) throw new Error(json?.error || "Geocode failed");
       setCoords({ lat: json.lat, lng: json.lng });
       setChosenPlace(json.formatted || q);
-    } catch (e: any) {
-      setErr(e.message);
+    } catch (e: unknown) {
+      setErr((e as Error)?.message ?? String(e));
     } finally {
       setLoading(false);
     }
@@ -131,18 +149,18 @@ export default function Home() {
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         const upstreamMsg =
-          json?.upstream?.error?.message ||
-          json?.upstream?.message ||
-          json?.upstream?.detail ||
-          json?.error ||
+          (json && (json as any).upstream?.error?.message) ||
+          (json && (json as any).error) ||
           "Unknown error";
-        throw new Error(`(${json?.upstreamStatus || res.status}) ${upstreamMsg}`);
+        throw new Error(upstreamMsg);
       }
 
-      setResults(json.results || []);
-      setAi(json.ai || null);
-    } catch (e: any) {
-      setErr(e.message);
+      // At this point we expect json.results to be an array of Place-like objects.
+      const places = Array.isArray((json as any).results) ? ((json as any).results as Place[]) : [];
+      setResults(places);
+      setAi((json as any).ai ?? null);
+    } catch (e: unknown) {
+      setErr((e as Error)?.message ?? String(e));
     } finally {
       setLoading(false);
     }
@@ -153,6 +171,15 @@ export default function Home() {
     if (chosenPlace) return chosenPlace;
     return `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`;
   }, [coords, chosenPlace]);
+
+  // Helper: build photo URL (photo.name comes from Places API)
+  function getPhotoUrl(photo?: Photo, maxHeight = 320): string | null {
+    if (!photo?.name) return null;
+    const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
+    return `https://places.googleapis.com/v1/${photo.name}/media?key=${encodeURIComponent(
+      key
+    )}&maxHeightPx=${maxHeight}`;
+  }
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-pink-50 via-white to-blue-50">
@@ -271,9 +298,7 @@ export default function Home() {
                 onChange={(e) => setRadius(parseInt(e.target.value))}
                 className="w-full accent-blue-600"
               />
-              <span className="w-20 text-right text-sm text-gray-700">
-                {Math.round(radius)} m
-              </span>
+              <span className="w-20 text-right text-sm text-gray-700">{Math.round(radius)} m</span>
             </div>
           </div>
 
@@ -297,21 +322,16 @@ export default function Home() {
           <div className="md:col-span-2">
             <label className="text-xs font-medium text-gray-600">Open now</label>
             <div className="mt-1 flex h-11 items-center rounded-xl border border-gray-300 bg-green-50 px-3">
-              <input
-                type="checkbox"
-                checked={openNow}
-                onChange={(e) => setOpenNow(e.target.checked)}
-                className="accent-green-600"
-              />
+              <input type="checkbox" checked={openNow} onChange={(e) => setOpenNow(e.target.checked)} className="accent-green-600" />
               <span className="ml-2 text-sm text-gray-800">Only show open</span>
             </div>
           </div>
 
           {/* Dietary (2/12) */}
           <div className="md:col-span-2">
-            <label className="text-xs font-medium text-gray-600">Dietary</label>
+            <label className="text-xs font-medium text-black">Dietary</label>
             <select
-              className="mt-1 h-11 w-full rounded-xl border border-gray-300 bg-purple-50 px-3 text-sm text-gray-800 outline-none transition focus:ring-2 focus:ring-purple-300 hover:border-purple-400"
+              className="mt-1 h-11 w-full rounded-xl border border-gray-300 bg-purple-50 px-3 text-sm text-black outline-none transition focus:ring-2 focus:ring-purple-300 hover:border-purple-400"
               value={dietary}
               onChange={(e) => setDietary(e.target.value as any)}
             >
@@ -321,42 +341,20 @@ export default function Home() {
             </select>
           </div>
 
-
-          {/* Services (1/12 → expanded to 3/12 for balance) */}
+          {/* Services (3/12) */}
           <div className="md:col-span-3">
             <label className="text-xs font-medium text-gray-600">Services</label>
             <div className="mt-1 grid h-11 grid-cols-3 items-center gap-3 rounded-xl border border-gray-300 bg-indigo-50 px-3 text-sm">
               <label className="flex items-center gap-2 text-indigo-700">
-                <input
-                  type="checkbox"
-                  className="accent-indigo-600"
-                  checked={!!services.delivery}
-                  onChange={(e) =>
-                    setServices((s) => ({ ...s, delivery: e.target.checked }))
-                  }
-                />
+                <input type="checkbox" className="accent-indigo-600" checked={!!services.delivery} onChange={(e) => setServices((s) => ({ ...s, delivery: e.target.checked }))} />
                 Delivery
               </label>
               <label className="flex items-center gap-2 text-pink-700">
-                <input
-                  type="checkbox"
-                  className="accent-pink-600"
-                  checked={!!services.dineIn}
-                  onChange={(e) =>
-                    setServices((s) => ({ ...s, dineIn: e.target.checked }))
-                  }
-                />
+                <input type="checkbox" className="accent-pink-600" checked={!!services.dineIn} onChange={(e) => setServices((s) => ({ ...s, dineIn: e.target.checked }))} />
                 Dine-in
               </label>
               <label className="flex items-center gap-2 text-yellow-700">
-                <input
-                  type="checkbox"
-                  className="accent-yellow-500"
-                  checked={!!services.takeout}
-                  onChange={(e) =>
-                    setServices((s) => ({ ...s, takeout: e.target.checked }))
-                  }
-                />
+                <input type="checkbox" className="accent-yellow-500" checked={!!services.takeout} onChange={(e) => setServices((s) => ({ ...s, takeout: e.target.checked }))} />
                 Takeout
               </label>
             </div>
@@ -392,66 +390,41 @@ export default function Home() {
 
         {!loading && results.length > 0 && (
           <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {results.map((p: any, i: number) => {
-              const title = p.displayName?.text || p.displayName;
-              const addr = p.shortFormattedAddress;
+            {results.map((p: Place, i: number) => {
+              const title = (typeof p.displayName === "string" ? p.displayName : p.displayName?.text) ?? "Unknown";
+              const addr = p.shortFormattedAddress ?? "";
               const rating = p.rating ?? "—";
               const reviews = p.userRatingCount ?? 0;
-              const price = (p.priceLevel || "PRICE_LEVEL_UNSPECIFIED").replace(
-                "PRICE_LEVEL_",
-                "₹ "
-              );
+              const price = (p.priceLevel ?? "PRICE_LEVEL_UNSPECIFIED").replace("PRICE_LEVEL_", "₹ ");
+
+              const photoUrl = p.photos && p.photos.length > 0 ? getPhotoUrl(p.photos[0]) : null;
 
               return (
-                <article
-                  key={p.id}
-                  className="group overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:shadow-md"
-                >
-                  {/* Header gradient as placeholder for future photos */}
-                  {/* Image header */}
-                  <div className="relative h-40 w-full overflow-hidden">
-                    {p.photos && p.photos.length > 0 ? (
-                      <img src={getPhotoUrl(p.photos[0], process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!) ?? ""}
-                        alt={p.displayName?.text || "Restaurant photo"}
-                        className="h-full w-full object-cover transition group-hover:scale-105"
-                      />
+                <article key={p.id} className="group overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:shadow-md">
+                  {/* Image header (photo or placeholder) */}
+                  <div className="relative h-40 w-full overflow-hidden bg-gray-100">
+                    {photoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={photoUrl} alt={title} className="h-full w-full object-cover transition group-hover:scale-105" loading="lazy" />
                     ) : (
                       <div className="h-full w-full bg-gradient-to-br from-blue-100 to-indigo-200" />
                     )}
 
-                    {/* ranking badge */}
-                    <div className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-gray-800 shadow">
-                      #{i + 1}
-                    </div>
+                    <div className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-gray-800 shadow">#{i + 1}</div>
 
-                    {/* badges */}
                     <div className="absolute bottom-3 left-3 flex gap-2">
-                      {p?.currentOpeningHours?.openNow && (
-                        <Badge color="green">🟢 Open now</Badge>
-                      )}
-                      {p.servesVegetarianFood && (
-                        <Badge color="green">🥗 Veg options</Badge>
-                      )}
+                      {p?.currentOpeningHours?.openNow && <Badge color="green">🟢 Open now</Badge>}
+                      {p.servesVegetarianFood && <Badge color="green">🥗 Veg options</Badge>}
                     </div>
                   </div>
-
 
                   <div className="p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <h3 className="line-clamp-1 text-base font-semibold text-gray-900">
-                          {title}
-                        </h3>
+                        <h3 className="line-clamp-1 text-base font-semibold text-gray-900">{title}</h3>
                         <p className="mt-0.5 line-clamp-1 text-sm text-gray-600">{addr}</p>
                       </div>
-                      <a
-                        href={p.googleMapsUri}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="rounded-xl bg-blue-600 px-3 py-1.5 text-sm font-medium text-white opacity-0 transition group-hover:opacity-100"
-                      >
-                        Maps
-                      </a>
+                      <a href={p.googleMapsUri ?? "#"} target="_blank" rel="noreferrer" className="rounded-xl bg-blue-600 px-3 py-1.5 text-sm font-medium text-white opacity-0 transition group-hover:opacity-100">Maps</a>
                     </div>
 
                     <div className="mt-3 flex items-center gap-2 text-sm text-gray-800">
@@ -481,9 +454,7 @@ export default function Home() {
           </div>
         )}
 
-        <footer className="mt-10 mb-6 text-xs text-gray-500">
-          Place data © Google — presented via Places API.
-        </footer>
+        <footer className="mt-10 mb-6 text-xs text-gray-500">Place data © Google — presented via Places API.</footer>
       </section>
     </main>
   );
