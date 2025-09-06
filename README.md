@@ -7,8 +7,7 @@
 
 ## 📸 Screenshot
 
-![Best Resto Screenshot](./public/screenshot.png)  
-*(replace this with an actual screenshot of your running app — put the file under `/public/screenshot.png` in your repo)*
+![Best Resto Screenshot](./public/Screenshot.png)  
 
 ---
 
