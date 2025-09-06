@@ -1,4 +1,5 @@
 // app/api/restaurants/route.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 
 type ServicePrefs = { delivery?: boolean; dineIn?: boolean; takeout?: boolean };
