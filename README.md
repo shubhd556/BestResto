@@ -1,36 +1,90 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🍽️ Best Resto
 
-## Getting Started
+> Find the best restaurants near you — filtered by rating, cuisine, dietary preferences, and services.  
+> Live demo 👉 [Best Resto on Vercel](https://best-resto-shubhams-projects-dd9b6f23.vercel.app/)
 
-First, run the development server:
+---
+
+## 📸 Screenshot
+
+![Best Resto Screenshot](./public/screenshot.png)  
+*(replace this with an actual screenshot of your running app — put the file under `/public/screenshot.png` in your repo)*
+
+---
+
+## 🚀 Features
+
+- 🌍 **Search by location** – use GPS or type a city/area (e.g., "Baner Pune").
+- 🍲 **Cuisine search** – filter by keywords like *biryani, pizza, south indian*.
+- ⭐ **Rating filters** – minimum rating slider (e.g., 4.0+).
+- 🥗 **Dietary options** – Veg only, Non-veg, or Both.
+- 🛎️ **Service filters** – Delivery, Dine-in, Takeout.
+- 🔟 **Top results** – choose top 5, 10, 15, or 20 restaurants.
+- 🧠 **AI-powered rationale** – optional OpenAI integration to explain why results were picked.
+- 📷 **Place photos** – pulled from Google Places API.
+- 📱 **Responsive design** – inspired by Zomato/Airbnb search UIs.
+
+---
+
+## 🛠️ Tech Stack
+
+- **Frontend**: [Next.js 15](https://nextjs.org/) (App Router, Turbopack)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+- **APIs**:
+  - Google Places API (for restaurant data, ratings, and photos)
+  - OpenAI API (optional: re-ranking and rationale)
+- **Deployment**: [Vercel](https://vercel.com)
+
+---
+
+## ⚙️ Getting Started
+
+Clone the repo and install dependencies:
 
 ```bash
+git clone https://github.com/<your-username>/BestResto.git
+cd BestResto
+npm install
+
+
+🔑 Environment Variables
+
+Create a .env.local file in the root with:
+GOOGLE_MAPS_API_KEY=your_google_places_api_key
+OPENAI_API_KEY=your_openai_key   # (optional, only for AI rationale)
+
+
+You can get a Google API key from Google Cloud Console
+The OpenAI key is optional (remove if you don’t want AI explanation).
+
+🏃 Running Locally
+Start the dev server:
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Visit http://localhost:3000
+.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+🏗️ Production Build
+To simulate production:
+npm run build
+npm run start
 
-## Learn More
+🌍 Deployment
 
-To learn more about Next.js, take a look at the following resources:
+The app is deployed on Vercel:
+👉 https://best-resto-shubhams-projects-dd9b6f23.vercel.app/
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+You can also fork and deploy your own version with:
+npx vercel
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+📌 Future Improvements
+Add user login + favorites.
+Add map view with restaurant pins.
+Add pricing filters and categories.
+Improve AI ranking with more context.
 
-## Deploy on Vercel
+👨‍💻 Author
+Shubham Dudhal
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+💼 GitHub: @shubhd556
