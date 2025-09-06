@@ -1,7 +1,7 @@
 # 🍽️ Best Resto
 
 > Find the best restaurants near you — filtered by rating, cuisine, dietary preferences, and services.  
-> Live demo 👉 [Best Resto on Vercel](https://best-resto-shubhams-projects-dd9b6f23.vercel.app/)
+> Live demo 👉 [Best Resto on Vercel](https://best-resto-chi.vercel.app/)
 
 ---
 
