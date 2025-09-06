@@ -194,7 +194,7 @@ export default function Home() {
             </div>
             <div>
               <div className="text-lg font-semibold tracking-tight text-gray-900">Best Resto</div>
-              <div className="text-[11px] text-gray-500">Find places you’ll love</div>
+              <div className="text-[11px] text-gray-500">Find places you'll love</div>
             </div>
           </div>
 
