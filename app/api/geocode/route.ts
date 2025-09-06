@@ -1,38 +1,60 @@
+// app/api/geocode/route.ts
 import { NextRequest, NextResponse } from "next/server";
+
+type GeocodeRequestBody = {
+  query: string;
+};
+
+type GeocodeResult = {
+  formatted?: string;
+  lat: number;
+  lng: number;
+};
 
 export async function POST(req: NextRequest) {
   try {
-    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-    if (!apiKey) return NextResponse.json({ error: "Missing GOOGLE_MAPS_API_KEY" }, { status: 500 });
+    const body: GeocodeRequestBody = await req.json();
+    const q = (body?.query || "").trim();
+    if (!q) return NextResponse.json({ error: "Query missing" }, { status: 400 });
 
-    const { query } = (await req.json()) as { query?: string };
-    if (!query || !query.trim()) {
-      return NextResponse.json({ error: "Query is required" }, { status: 400 });
+    const key = process.env.GOOGLE_MAPS_API_KEY;
+    if (!key) return NextResponse.json({ error: "Server missing GOOGLE_MAPS_API_KEY" }, { status: 500 });
+
+    // Use Google Geocoding REST API (classic)
+    const params = new URLSearchParams({
+      address: q,
+      key,
+    });
+
+    const resp = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?${params.toString()}`);
+    if (!resp.ok) {
+      const txt = await resp.text();
+      return NextResponse.json({ error: "Geocode provider error", detail: txt }, { status: 502 });
     }
 
-    const url = new URL("https://maps.googleapis.com/maps/api/geocode/json");
-    url.searchParams.set("address", query.trim());
-    url.searchParams.set("key", apiKey);
+    // Narrow the shape of the external response
+    const j = (await resp.json()) as {
+      status?: string;
+      results?: Array<{
+        formatted_address?: string;
+        geometry?: { location?: { lat?: number; lng?: number } };
+      }>;
+    };
 
-    const res = await fetch(url.toString());
-    const json = await res.json();
-
-    if (json.status !== "OK" || !json.results?.length) {
-      return NextResponse.json({ error: "No results", upstream: json }, { status: 404 });
+    const first = j.results && j.results[0];
+    if (!first || !first.geometry?.location?.lat || !first.geometry?.location?.lng) {
+      return NextResponse.json({ error: "No results" }, { status: 404 });
     }
 
-    const best = json.results[0];
-    const { lat, lng } = best.geometry.location;
-    const formatted = best.formatted_address;
+    const result: GeocodeResult = {
+      formatted: first.formatted_address,
+      lat: first.geometry.location.lat as number,
+      lng: first.geometry.location.lng as number,
+    };
 
-    return NextResponse.json({ lat, lng, formatted, raw: best });
-  } catch (e: any) {
-    console.error("[Geocode error]", e);
-    return NextResponse.json({ error: e?.message || "Unknown error" }, { status: 500 });
+    return NextResponse.json(result);
+  } catch (e: unknown) {
+    const msg = (e as Error)?.message ?? String(e);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
-}
-
-// Optional: block GET to avoid accidental calls
-export async function GET() {
-  return NextResponse.json({ error: "Use POST /api/geocode" }, { status: 405 });
 }
